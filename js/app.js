@@ -1,0 +1,216 @@
+//Global Variables
+
+let pCardValues = [];
+let openCards = [];
+let numOfMoves = 0;
+let score = 0;
+let gameEnded = false;
+var startTime;
+var timerInterval;
+let totalTime = "";
+let starStep = 10;
+
+function init() {
+
+    pCardValues = [];
+    openCards = [];
+    score = 0;
+    numOfMoves = -1;
+    gameEnded = false;
+
+    updateMove();
+    updateScore(true);
+
+    //- shuffle the list of cards using the provided "shuffle" method below
+    pCardValues = prepareArray();
+    pCardValues = shuffle(pCardValues);
+
+    //- loop through each card and create its HTML
+    var frag = document.createDocumentFragment();
+    var deck = document.getElementById('deck');
+    for (var cardValue of pCardValues) {
+        let cardElement = document.createElement("li");
+        //-------For testing only---------
+        //cardElement.classList.add("show");
+        //--------------------------------
+        cardElement.classList.add("card");
+        let cardFont = document.createElement("i");
+        cardElement.appendChild(cardFont);
+        cardElement.addEventListener("click", toggleCard)
+        cardFont.classList.add("fa");
+        cardFont.classList.add(cardValue.split(' ')[1]);
+        frag.appendChild(cardElement);
+    }
+    //- add each card's HTML to the page
+    deck.appendChild(frag);
+
+    show("gameBoard");
+
+    //Start the Timer
+    initTimer();    
+}
+
+document.addEventListener("DOMContentLoaded", function (event) {
+
+    init();  
+
+});
+function initTimer() {
+    let startTime = new Date().getTime();
+    timerInterval = setInterval(function () {
+        var now = new Date().getTime();
+        var t = now - startTime;
+        var days = Math.floor(t / (1000 * 60 * 60 * 24));
+        var hours = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        var minutes = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((t % (1000 * 60)) / 1000);
+        totalTime = minutes + "m " + seconds + "s ";
+        document.getElementById("timer").innerHTML = totalTime;
+        if (gameEnded) {
+            clearInterval(timerInterval);
+            //console.log(timerInterval," cleared inside intrval")           
+        }
+    }, 1000);
+
+}
+function updateScore(reset) {
+    let starsContainer = document.getElementById("stars");
+
+    if (reset) {      
+        for (var i = 0; i < starsContainer.children.length; i++) {
+            star = starsContainer.children[i];
+            star.classList.remove("remove-star");
+        }
+    }
+    else {
+        var takeStarStep = (numOfMoves % starStep == 1) && (numOfMoves <= ((starStep * 3) + 1));
+        if (takeStarStep) {
+           
+            if (numOfMoves < starStep) {//0,1,2,3
+                score = 3;
+            }
+            else if (numOfMoves >= starStep && numOfMoves < (starStep * 2)) {//4,5,6,7
+                score = 2;
+                starsContainer.children[0].classList.add("remove-star");
+            }
+            else if (numOfMoves >= (starStep * 2) && numOfMoves <= (starStep * 3)) {//8,9,10,11,12
+                score = 1;
+                starsContainer.children[1].classList.add("remove-star");
+
+            }
+            else {//>13
+                score = 0;
+                starsContainer.children[2].classList.add("remove-star");
+            }
+        }
+    }
+
+}
+function updateMove() {
+    numOfMoves++;
+    document.getElementById("moves").innerText = numOfMoves;
+
+}
+function ResetGame() {
+    gameEnded = true;
+    //  console.logtimerInterval, " before clearing"
+    clearInterval(timerInterval);
+    // console.log(timerInterval," cleared")        
+    var deck = document.getElementById('deck');
+    deck.innerHTML = "";
+    init();
+
+}
+function toggleCard(card) {
+
+    card = card.target;
+    //If user tend to open a card
+    if (!card.classList.contains("open")) {
+        // Open card action : - Set class= open , show - Add card to open list
+        card.classList.add("open");
+        card.classList.add("show");
+        openCards.push(card);
+        if (openCards && openCards.length > 0 && openCards.length % 2 == 0) {
+            let card1 = openCards[openCards.length - 2];
+            let card2 = openCards[openCards.length - 1];
+            let match = checkMatching(card1, card2);
+            if (match) {
+                card1.classList.add('match');
+                card2.classList.add('match');
+            }
+            else {
+                card1.classList.add('mismatch');
+                card2.classList.add('mismatch');
+
+                setTimeout(() => {
+                    card1.classList.remove("open");
+                    card1.classList.remove("show");
+                    card1.classList.remove("mismatch");
+
+                    card2.classList.remove("open");
+                    card2.classList.remove("show");
+                    card2.classList.remove("mismatch");
+
+                }, 1000);
+                openCards.splice(-2, 2);
+
+            }
+            updateMove();
+            updateScore(false);
+            if (openCards.length == pCardValues.length) {
+                gameEnded = true;
+                clearInterval(timerInterval);
+                hide("gameBoard");
+                show("winPopup");
+                document.getElementById("winInfo").innerText = `With ${numOfMoves} Moves and ${score} Starts in ${totalTime}`;
+
+            }
+
+        }
+
+    }
+
+}
+function show(element) {
+    let e = document.getElementById(element);
+    if (e)
+        document.getElementById(element).classList.remove('hide');
+}
+function hide(element) {
+    let e = document.getElementById(element);
+    if (e)
+        document.getElementById(element).classList.add('hide');
+}
+
+function checkMatching(card1, card2) {
+    return card1.firstChild.classList.value == card2.firstChild.classList.value;
+}
+
+function prepareArray() {
+    let cardValues = ["fa fa-diamond",
+        "a fa-paper-plane-o",
+        "fa fa-anchor",
+        "fa fa-bolt",
+        "fa fa-cube",
+        "fa fa-bomb",
+        "a fa-leaf",
+        "fa fa-bicycle"
+    ];
+    let pCardValues = [...cardValues, ...cardValues];
+    return pCardValues;
+
+}
+
+function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+    }
+
+    return array;
+}
